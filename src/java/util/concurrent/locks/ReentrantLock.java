@@ -238,6 +238,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
         private static final long serialVersionUID = -3000897897090466540L;
 
         final void lock() {
+            //排队获取锁
             acquire(1);
         }
 

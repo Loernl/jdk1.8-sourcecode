@@ -585,11 +585,15 @@ public abstract class AbstractQueuedSynchronizer
     private Node enq(final Node node) {
         for (;;) {
             Node t = tail;
+            //尾部节点为空
             if (t == null) { // Must initialize
+                //设置头节点为新节点,并将尾节点指向头节点
                 if (compareAndSetHead(new Node()))
                     tail = head;
             } else {
+                //node的前驱节点设置为tail节点
                 node.prev = t;
+                //设置node为尾节点成功后，将之前尾节点的后驱节点指向node
                 if (compareAndSetTail(t, node)) {
                     t.next = node;
                     return t;
@@ -607,10 +611,15 @@ public abstract class AbstractQueuedSynchronizer
     private Node addWaiter(Node mode) {
         Node node = new Node(Thread.currentThread(), mode);
         // Try the fast path of enq; backup to full enq on failure
+        //获取尾部节点
         Node pred = tail;
+        //如果尾部节点不为null
         if (pred != null) {
+            //设置当前节点的前驱节点为pred
             node.prev = pred;
+            //如果成功设置node节点为尾部节点
             if (compareAndSetTail(pred, node)) {
+                //前尾部节点的后驱节点为node
                 pred.next = node;
                 return node;
             }
@@ -930,29 +939,40 @@ public abstract class AbstractQueuedSynchronizer
             throws InterruptedException {
         if (nanosTimeout <= 0L)
             return false;
+        //设置线程最长独占锁时间
         final long deadline = System.nanoTime() + nanosTimeout;
+        //添加一个独占锁节点
         final Node node = addWaiter(Node.EXCLUSIVE);
         boolean failed = true;
         try {
+            //死循环自旋
             for (;;) {
+                //获取node的前驱节点
                 final Node p = node.predecessor();
+                //如果前驱节点为头节点并且尝试获取锁成功
                 if (p == head && tryAcquire(arg)) {
+                    //将头节点设置为node
                     setHead(node);
+                    //前驱节点的后驱节点指向null
                     p.next = null; // help GC
                     failed = false;
                     return true;
                 }
+                //计算timeout时间
                 nanosTimeout = deadline - System.nanoTime();
                 if (nanosTimeout <= 0L)
                     return false;
+                //判断node失败获取锁之后是否可以park，可以park之后timeout是否大于spinForTimeoutThreshold
                 if (shouldParkAfterFailedAcquire(p, node) &&
                     nanosTimeout > spinForTimeoutThreshold)
+                    //设置线程最大park时间为nanosTimeout
                     LockSupport.parkNanos(this, nanosTimeout);
                 if (Thread.interrupted())
                     throw new InterruptedException();
             }
         } finally {
             if (failed)
+                //如果获取锁失败，则移除该节点
                 cancelAcquire(node);
         }
     }
