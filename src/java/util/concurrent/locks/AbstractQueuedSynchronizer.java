@@ -293,6 +293,8 @@ public abstract class AbstractQueuedSynchronizer
     private static final long serialVersionUID = 7373984972572414691L;
 
     /**
+     *
+     *
      * Creates a new {@code AbstractQueuedSynchronizer} instance
      * with initial synchronization state of zero.
      */
@@ -793,21 +795,27 @@ public abstract class AbstractQueuedSynchronizer
      * @return {@code true} if thread should block
      */
     private static boolean shouldParkAfterFailedAcquire(Node pred, Node node) {
+        //获取先前节点的状态
         int ws = pred.waitStatus;
+        //如果节点为singal
         if (ws == Node.SIGNAL)
             /*
              * This node has already set status asking a release
              * to signal it, so it can safely park.
              */
+           //当前节点可以安全park
             return true;
+            //先前节点为cancel状态
         if (ws > 0) {
             /*
              * Predecessor was cancelled. Skip over predecessors and
              * indicate retry.
              */
+            //先前节点为cancel状态，将当前node的先前节点指定为先前节点的先前节点，一直持续到当前node的先前节点不为cancel为止
             do {
                 node.prev = pred = pred.prev;
             } while (pred.waitStatus > 0);
+            //先前节点的next节点为当前node
             pred.next = node;
         } else {
             /*
@@ -815,6 +823,7 @@ public abstract class AbstractQueuedSynchronizer
              * need a signal, but don't park yet.  Caller will need to
              * retry to make sure it cannot acquire before parking.
              */
+            //将先前节点的状态设置为0，以确保当前节点在parking之前不能获取锁
             compareAndSetWaitStatus(pred, ws, Node.SIGNAL);
         }
         return false;
@@ -858,19 +867,26 @@ public abstract class AbstractQueuedSynchronizer
         boolean failed = true;
         try {
             boolean interrupted = false;
+            //死循环自旋
             for (;;) {
+                //获取当前节点的前驱节点
                 final Node p = node.predecessor();
+                //如果前驱节点是头节点并且尝试获取锁成功
                 if (p == head && tryAcquire(arg)) {
+                    //设置当前节点为头节点
                     setHead(node);
-                    p.next = null; // help GC
+                    p.next = null;  // help GC
                     failed = false;
                     return interrupted;
                 }
+                //判断获取锁失败后是否可以park并且可以park之后并且park成功
                 if (shouldParkAfterFailedAcquire(p, node) &&
-                    parkAndCheckInterrupt())
+                    parkAndCheckInterrupt()) {
                     interrupted = true;
+                }
             }
         } finally {
+            //如果失败，则取消排队,删除该节点
             if (failed)
                 cancelAcquire(node);
         }
@@ -1195,8 +1211,10 @@ public abstract class AbstractQueuedSynchronizer
      *        can represent anything you like.
      */
     public final void acquire(int arg) {
+        //尝试获取锁失败并且排队成功
         if (!tryAcquire(arg) &&
             acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
+            //中断当前线程
             selfInterrupt();
     }
 

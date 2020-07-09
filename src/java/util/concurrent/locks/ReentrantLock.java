@@ -143,8 +143,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
             //如果当前线程是当前独占锁的线程
             else if (current == getExclusiveOwnerThread()) {
                 int nextc = c + acquires;
-                if (nextc < 0) // overflow
-                     {
+                if (nextc < 0){
                     throw new Error("Maximum lock count exceeded");
                 }
                 //设置最新的值给内存变量
@@ -152,6 +151,7 @@ public class ReentrantLock implements Lock, java.io.Serializable {
                 //返回true，获取锁成功
                 return true;
             }
+            //返回false，尝试获取锁失败
             return false;
         }
 
@@ -161,14 +161,18 @@ public class ReentrantLock implements Lock, java.io.Serializable {
             if (Thread.currentThread() != getExclusiveOwnerThread())
                 throw new IllegalMonitorStateException();
             boolean free = false;
+            //如果是0的话表示锁已经被释放
             if (c == 0) {
                 free = true;
+                //设置当前独占锁为null
                 setExclusiveOwnerThread(null);
             }
+            //设置最新内存值
             setState(c);
             return free;
         }
 
+        //判断当前线程是否为独占锁线程
         protected final boolean isHeldExclusively() {
             // While we must in general read state before owner,
             // we don't need to do so to check if current thread is owner
@@ -214,9 +218,11 @@ public class ReentrantLock implements Lock, java.io.Serializable {
          * acquire on failure.
          */
         final void lock() {
+            //交换期望值如果成功则设置当前线程为独占锁线程，加锁成功
             if (compareAndSetState(0, 1))
                 setExclusiveOwnerThread(Thread.currentThread());
             else
+                //线程没有抢占到锁时，需要排队
                 acquire(1);
         }
 
@@ -243,12 +249,15 @@ public class ReentrantLock implements Lock, java.io.Serializable {
             final Thread current = Thread.currentThread();
             int c = getState();
             if (c == 0) {
+                //当前队列中没有等待获取锁更长的时间并且内存交换值成功
                 if (!hasQueuedPredecessors() &&
                     compareAndSetState(0, acquires)) {
+                    //设置当前线程为独占锁线程
                     setExclusiveOwnerThread(current);
                     return true;
                 }
             }
+            //如果当前线程为独占锁线程，更改内存值，获取锁成功
             else if (current == getExclusiveOwnerThread()) {
                 int nextc = c + acquires;
                 if (nextc < 0)
